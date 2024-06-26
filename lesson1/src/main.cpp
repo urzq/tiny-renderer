@@ -5,7 +5,6 @@
 
 TGAImage image(800, 800, TGAImage::RGB);
 
-const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
 
 const int CHUNK = 1024;
@@ -20,33 +19,52 @@ struct Vertex {
 
 using Face = std::array<int, 3>;
 
-void line(int sx, int sy, int ex, int ey, TGAColor color) {
-	auto dx = ex - sx;
-	auto dy = ey - sy;
+void line(int x0, int y0, int x1, int y1, const TGAColor& color) {
+	bool steep = false;
 
-	if (abs(dx) > abs(dy)) {
-		if (sx > ex) {
-			std::swap(sx, ex);
-			std::swap(sy, ey);
-		}
-
-		for (int x = sx; x < ex; x++) {
-			float step = (x - sx) / (float)dx;
-			float y = sy + dy * step;
-			image.set(x, round(y), color);
-		}
+	// if the line is steep, we transpose the image 
+	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
+		std::swap(x0, y0);
+		std::swap(x1, y1);
+		steep = true;
 	}
-	else {
-		if (sy > ey) {
-			std::swap(sx, ex);
-			std::swap(sy, ey);
+
+	// Reorder the line so it's left to right
+	if (x0 > x1) {
+		std::swap(x0, x1);
+		std::swap(y0, y1);
+	}
+
+	int dx = x1 - x0;
+	int dy = y1 - y0;
+
+	int D = 2 * dy - dx;
+	int x = x0;
+	int y = y0;
+	int sy = 1;
+	if (y1 < y0) {
+		dy = -dy;
+		sy = -1;
+	}
+
+	if (steep)
+		image.set(y, x, color);
+	else
+		image.set(x, y, color);
+
+	for (int x = x0; x < x1; x++) {
+		if (D < 0) {
+			D = D + 2 * dy;
+		}
+		else {
+			y += sy;
+			D = D + 2 * (dy - dx);
 		}
 
-		for (int y = sy; y < ey; y++) {
-			float step = (y - sy) / (float)dy;
-			float x = sx + dx * step;
-			image.set(round(x), y, color);
-		}
+		if (steep)
+			image.set(y, x, color);
+		else
+			image.set(x, y, color);
 	}
 }
 
@@ -57,7 +75,7 @@ int main(int argc, char** argv) {
 	}
 
 	char buff[CHUNK];
-	
+
 	std::vector<Vertex> vertices;
 	std::vector<Face> faces;
 
@@ -89,9 +107,7 @@ int main(int argc, char** argv) {
 			auto ex = int((v1.x + 1) * (width - 1) / 2.0);
 			auto ey = int((v1.y) * (height - 1) / 2.0);
 
-			if (sx < width && sy < height && ex < width && ey < height) {
-				line(sx, sy, ex, ey, red);
-			}
+			line(sx, sy, ex, ey, red);
 		}
 	}
 
