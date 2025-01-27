@@ -111,6 +111,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	// origin at the left bottom corner of the image
 	image.flip_vertically();
 	image.write_tga_file("res\\output.tga");
 
